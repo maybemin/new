@@ -8,27 +8,21 @@ import (
 )
 
 func main() {
-
+	var scanner *bufio.Scanner
 	if len(os.Args) == 2 {
-		ioscanner := bufio.NewScanner(os.Stdin)
-
-		for ioscanner.Scan() {
-			if strings.Contains(ioscanner.Text(), os.Args[1]) {
-				fmt.Println(ioscanner.Text())
-			}
-		}
+		scanner = bufio.NewScanner(os.Stdin)
 	}
 
 	if len(os.Args) == 3 {
 		file, _ := os.Open(os.Args[2])
 		defer file.Close()
-		scanner := bufio.NewScanner(file)
+		scanner = bufio.NewScanner(file)
 		scanner.Split(bufio.ScanLines)
+	}
 
-		for scanner.Scan() {
-			if strings.Contains(scanner.Text(), os.Args[1]) {
-				fmt.Println(scanner.Text())
-			}
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), os.Args[1]) {
+			fmt.Println(scanner.Text())
 		}
 	}
 
