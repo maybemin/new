@@ -56,13 +56,12 @@ func main(){
 
 	var utmp UTMP
 
-	if len(os.Args) == 2 { //전체 출력
+	if len(os.Args) == 2 {
 		fileName := os.Args[1]
 		file , err := FileInfo(fileName)
 		defer file.Close()
 
 		for {
-			//err = binary.Read(file, binary.LittleEndian, &utmp)
 			err = BinaryRead(file, &utmp)
 			ErrorCheck(err)
 			PrintData(utmp)
@@ -80,7 +79,6 @@ func main(){
 		file.Seek(fileSize - int64(structSize)*5, os.SEEK_SET)
 
 		for {
-			//err = binary.Read(file, binary.LittleEndian, &utmp)
 			err = BinaryRead(file, &utmp)
 
 			if err != nil {
@@ -88,7 +86,6 @@ func main(){
 					for {
 						afterFileSize := CheckFileSize(file)
 						if fileSize < afterFileSize {
-							//binary.Read(file, binary.LittleEndian, &utmp)
 							err = BinaryRead(file, &utmp)
 							PrintData(utmp)
 							fileSize = afterFileSize
