@@ -1,0 +1,38 @@
+package main
+
+import (
+	"testing"
+	"os"
+	"fmt"
+)
+
+var testData = []string {
+	"wtmp",
+	"wtmp",
+	"wtmp222",
+}
+
+func TestFileInfo(t *testing.T) {
+
+	for i := 0 ; i < len(testData) ; i++ {
+		_ , err := FileInfo(testData[i])
+		if err != nil {
+			t.Error("error", testData[i])
+		} else {
+			fmt.Println("Successed file : ",testData[i])
+		}
+	}
+
+}
+
+func TestBinaryRead(t *testing.T) {
+
+	var testUtmp UTMP
+	file, _ := os.Open("wtmp")
+
+	err := BinaryRead(file, &testUtmp)
+
+	if err != nil {
+		t.Error("error")
+	}
+}
