@@ -1,0 +1,140 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"encoding/binary"
+	"io"
+	"unsafe"
+	"strings"
+)
+
+const (
+	UTUNKNOWN	=	0
+	RUNLVL		=	1
+	BOOTTIME	=	2
+	NEWTIME		=	3
+	OLDTIME		=	4
+	INITPROCESS	=	5
+	LOGINPROCESS=	6
+	USERPROCESS	=	7
+	DEADPROCESS	=	8
+	ACCOUNTING	=	9
+
+	UTLINESIZE	=	32
+	UTNAMESIZE	=	32
+	UTHOSTSIZE	=	256
+)
+
+type ExitStatus struct{
+	ETermination	uint16
+	EExit 			uint16
+}
+
+type UTTV struct {
+	TvSec	uint32
+	TvUsec	uint32
+}
+
+type UTMP struct{
+	UtType	uint16
+	_		uint16
+	UtPid 	uint32
+	UtLine	[UTLINESIZE]byte
+	UtId	[4]byte
+	UtUser	[UTNAMESIZE]byte
+	UtHost	[UTHOSTSIZE]byte
+	UtExit	ExitStatus
+
+	UtSession		uint32
+	UtTv 			UTTV
+	UtAddrV6		[4]uint32
+	Unused			[20]byte
+}
+
+func main(){
+
+	var utmp UTMP
+
+	if len(os.Args) == 2 { //전체 출력
+		fileName := os.Args[1]
+		file , err := FileInfo(fileName)
+		defer file.Close()
+
+		for {
+			//err = binary.Read(file, binary.LittleEndian, &utmp)
+			err = BinaryRead(file, &utmp)
+			ErrorCheck(err)
+			PrintData(utmp)
+		}
+	}
+
+	if len(os.Args) == 3 {
+		fileName := os.Args[2]
+		file , err := FileInfo(fileName)
+		defer file.Close()
+
+		fileSize := CheckFileSize(file)
+		structSize :=unsafe.Sizeof(utmp)
+
+		file.Seek(fileSize - int64(structSize)*5, os.SEEK_SET)
+
+		for {
+			//err = binary.Read(file, binary.LittleEndian, &utmp)
+			err = BinaryRead(file, &utmp)
+
+			if err != nil {
+				if err == io.EOF || err == io.ErrUnexpectedEOF {
+					for {
+						afterFileSize := CheckFileSize(file)
+						if fileSize < afterFileSize {
+							//binary.Read(file, binary.LittleEndian, &utmp)
+							err = BinaryRead(file, &utmp)
+							PrintData(utmp)
+							fileSize = afterFileSize
+						}
+					}
+				}
+			}
+			PrintData(utmp)
+		}
+
+	}
+
+}
+
+func BinaryRead(file *os.File, utmp *UTMP) (err error) {
+	err = binary.Read(file, binary.LittleEndian, utmp)
+	return err
+}
+
+func CheckFileSize (file *os.File) (int64) {
+	fileStat, err := file.Stat()
+	ErrorCheck(err)
+	fileSize := fileStat.Size()
+	return fileSize
+}
+
+func FileInfo (fileName string) (*os.File , error) {
+	file , err := os.Open(fileName)
+	ErrorCheck(err)
+	return file, err
+}
+
+func ErrorCheck (err error)  {
+	if err != nil {
+		fmt.Println("error : ", err)
+	}
+}
+
+func PrintData (utmp UTMP) {
+	fmt.Printf("ut_type=%d, ut_pid=%d, Ut_Line=%s, ut_id=%s, ut_user=%s, ut_host=%s, ut_exit=%d, ut_session=%d, ut_tv=%d, ut_addr_v6=%d, unused=%s  \n" ,
+		utmp.UtType, utmp.UtPid, DataTrim(utmp.UtLine[:]), DataTrim(utmp.UtId[:]), DataTrim(utmp.UtUser[:]),
+		DataTrim(utmp.UtHost[:]), utmp.UtExit, utmp.UtSession, utmp.UtTv, utmp.UtAddrV6, DataTrim(utmp.Unused[:]))
+}
+
+func DataTrim (b []byte) string {
+	data := string(b)
+	result := strings.Trim(data , "\x00")
+	return result
+}
